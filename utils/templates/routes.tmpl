@@ -1,0 +1,50 @@
+import 'package:core/core.dart';
+
+import 'bindings/{{.StructName | toLower}}_binding.dart';
+import 'views/create.dart';
+import 'views/edit.dart';
+import 'views/index.dart';
+import 'views/show.dart';
+
+class {{.PluralName}}Routes {
+  static final routes = [
+    BaseRoute(
+      name: {{.PluralName}}Route.list,
+      page: () => {{.PluralName}}Index(),
+      binding: {{.PluralName}}Binding(),
+    ),
+    BaseRoute(
+      name: {{.PluralName}}Route.create,
+      page: () => {{.StructName}}Create(),
+      binding: {{.PluralName}}Binding(),
+    ),
+    BaseRoute(
+      name: {{.PluralName}}Route.edit,
+      page: () =>  {{.StructName}}Edit(),
+      binding: {{.PluralName}}Binding(),
+    ),
+    BaseRoute(
+      name: {{.PluralName}}Route.show,
+      page: () =>  const {{.StructName}}Show(),
+      binding: {{.PluralName}}Binding(),
+    ),
+    BaseRoute(
+      name: {{.PluralName}}Route.sort,
+      page: () =>  {{.StructName}}SortView(),
+      binding: {{.PluralName}}Binding(),
+    ),
+  ];
+}
+
+abstract class {{.PluralName}}Route {
+  {{.PluralName}}Route._();
+
+  static const list = '/{{.LowerPluralStructName}}';
+  static const create = '/{{.LowerPluralStructName}}/create';
+  static const edit = '/{{.LowerPluralStructName}}/edit/:id';
+  static const show = '/{{.LowerPluralStructName}}/show/:id';
+  static const sort = '/{{.LowerPluralStructName}}/sort';
+  // Helper methods for dynamic routes
+  static String editPath(int id) => '/{{.LowerPluralStructName}}/edit/$id';
+  static String showPath(int id) => '/{{.LowerPluralStructName}}/show/$id';
+}

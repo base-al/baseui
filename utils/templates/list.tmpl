@@ -1,0 +1,111 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../controllers/{{.StructName | toLower}}_controller.dart';
+import '../../models/{{.StructName | toLower}}.dart';
+
+class {{.PluralName}}ListView extends StatelessWidget {
+  final {{.PluralName}}Controller controller;
+
+  const {{.PluralName}}ListView({
+    super.key,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: controller.items.length,
+      itemBuilder: (context, index) {
+        final item = controller.items[index];
+        return _buildListItem(item);
+      },
+    );
+  }
+
+  Widget _buildListItem({{.StructName}} item) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: ListTile(
+        leading: _buildAvatar(item),
+        title: Text(
+          {{- if .Fields}}
+          {{- with index .Fields 0}}
+          item.{{.Name | toCamelCase}}?.toString() ?? 'No {{.Name}}'
+          {{- end}}
+          {{- else}}
+          'Item ${item.id}'
+          {{- end}}
+        ),
+        subtitle: Text(
+          {{- if ge (len .Fields) 2}}
+          {{- with index .Fields 1}}
+          item.{{.Name | toCamelCase}}?.toString() ?? 'No {{.Name}}'
+          {{- end}}
+          {{- else}}
+          'ID: ${item.id}'
+          {{- end}}
+        ),
+        trailing: _buildActions(item),
+        onTap: () => Get.toNamed('/{{.LowerPluralStructName}}/show/${item.id}', arguments: item),
+      ),
+    );
+  }
+
+  Widget _buildAvatar({{.StructName}} item) {
+    return CircleAvatar(
+      backgroundColor: Colors.blue.shade100,
+      child: Text(
+        {{- if .Fields}}
+        {{- with index .Fields 0}}
+        item.{{.Name | toCamelCase}}?.toString()[0].toUpperCase() ?? '?'
+        {{- end}}
+        {{- else}}
+        item.id.toString()[0]
+        {{- end}},
+        style: TextStyle(color: Colors.blue.shade700),
+      ),
+    );
+  }
+
+  Widget _buildActions({{.StructName}} item) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.edit),
+          onPressed: () => Get.toNamed('/{{.LowerPluralStructName}}/edit/${item.id}', arguments: item),
+          color: Colors.orange,
+        ),
+        IconButton(
+          icon: const Icon(Icons.delete),
+          onPressed: () => _confirmDelete(item),
+          color: Colors.red,
+        ),
+      ],
+    );
+  }
+
+  void _confirmDelete({{.StructName}} item) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: Text('Are you sure you want to delete this {{.StructName | toLower}}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              controller.delete{{.StructName}}(item.id);
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+}

@@ -1,0 +1,52 @@
+import 'package:admin/core/widgets/base/table.dart';
+import 'package:flutter/material.dart';
+import '../models/{{.StructName | toLower}}.dart';
+
+class {{.StructName}}DataSource extends BaseDataSource<{{.StructName}}> {
+  {{.StructName}}DataSource(
+    super.context,
+    super.items,
+    super.totalCount, {
+    super.onViewPressed,
+    super.onEditPressed,
+    super.onDeletePressed,
+    super.isLoading,
+  });
+
+  @override
+  DataRow buildRow(int index) {
+    final item = items[index];
+
+    return DataRow(
+      cells: [
+        // ID Cell
+        buildCopyableCell(
+          item.id.toString(),
+          'ID',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        {{- range .Fields}}
+        {{- if ne .Type "password"}}
+        // {{.Name | toTitleCase}} Cell
+        buildSelectableCell(item.{{.Name | toCamelCase}}?.toString() ?? '-'),
+        {{- end}}
+        {{- end}}
+        // Actions Cell
+        buildActionsCell(item.id),
+      ],
+    );
+  }
+
+  @override
+  int getColumnsCount() {
+    // Count visible columns (excluding password field)
+    int baseColumns = 2; // ID and Actions
+    int visibleFields = {{len .Fields}}; 
+    {{- range .Fields}}
+    {{- if eq .Type "password"}}
+    visibleFields--;
+    {{- end}}
+    {{- end}}
+    return baseColumns + visibleFields;
+  }
+}

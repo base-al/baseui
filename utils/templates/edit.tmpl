@@ -1,0 +1,201 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controllers/{{.StructName | toLower}}_controller.dart';
+import '../models/{{.StructName | toLower}}.dart';
+
+class {{.StructName}}Edit extends GetView<{{.PluralName}}Controller> {
+  {{.StructName}}Edit({super.key});
+  
+  final _formKey = GlobalKey<FormState>();  
+  // Controllers for form fields
+  {{- range .Fields}}
+  final _{{.Name | toCamelCase}}Controller = TextEditingController();
+  {{- end}}
+
+  // State variables using GetX reactive state
+  {{- range .Fields}}
+  {{- if eq .Type "DateTime"}}
+  final Rx<DateTime?> _selected{{.Name | toPascalCase}} = Rx<DateTime?>(null);
+  {{- else if eq .Type "bool"}}
+  final RxBool _is{{.Name | toPascalCase}} = false.obs;
+  {{- end}}
+  {{- end}}
+
+  @override
+  Widget build(BuildContext context) {
+    final {{.StructName}} item = Get.arguments;
+
+    // Initialize controllers and state with existing values
+    {{- range .Fields}}
+    {{- if eq .Type "DateTime"}}
+    if (item.{{.Name | toCamelCase}} != null) {
+      _selected{{.Name | toPascalCase}}.value = item.{{.Name | toCamelCase}};
+      _{{.Name | toCamelCase}}Controller.text = _dateFormat.format(item.{{.Name | toCamelCase}}!);
+    }
+    {{- else if eq .Type "bool"}}
+    _is{{.Name | toPascalCase}}.value = item.{{.Name | toCamelCase}} ?? false;
+    _{{.Name | toCamelCase}}Controller.text = (item.{{.Name | toCamelCase}} ?? false).toString();
+    {{- else}}
+    _{{.Name | toCamelCase}}Controller.text = item.{{.Name | toCamelCase}}?.toString() ?? '';
+    {{- end}}
+    {{- end}}
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit {{.StructName}}'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              {{- range .Fields}}
+              {{- if eq .Type "DateTime"}}
+              TextFormField(
+                controller: _{{.Name | toCamelCase}}Controller,
+                decoration: const InputDecoration(
+                  labelText: '{{.Name | toTitleCase}}',
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                readOnly: true,
+                onTap: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: _selected{{.Name | toPascalCase}}.value ?? DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                    if (!context.mounted) return;
+                  if (picked != null) {
+                    final TimeOfDay? time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(_selected{{.Name | toPascalCase}}.value ?? DateTime.now()),
+                    );
+                      if (context.mounted && time != null) {
+                      _selected{{.Name | toPascalCase}}.value = DateTime(
+                        picked.year,
+                        picked.month,
+                        picked.day,
+                        time.hour,
+                        time.minute,
+                      );
+                      _{{.Name | toCamelCase}}Controller.text = _dateFormat.format(_selected{{.Name | toPascalCase}}.value!);
+                    }
+                  }
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select {{.Name | toLower}}';
+                  }
+                  return null;
+                },
+              ),
+              {{- else if eq .Type "bool"}}
+              Obx(() => CheckboxListTile(
+                title: const Text('{{.Name | toTitleCase}}'),
+                value: _is{{.Name | toPascalCase}}.value,
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    _is{{.Name | toPascalCase}}.value = value;
+                    _{{.Name | toCamelCase}}Controller.text = value.toString();
+                  }
+                },
+              )),
+              {{- else if eq .Type "int"}}
+              TextFormField(
+                controller: _{{.Name | toCamelCase}}Controller,
+                decoration: const InputDecoration(labelText: '{{.Name | toTitleCase}}'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter {{.Name | toLower}}';
+                  }
+                  if (int.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              {{- else if eq .Type "double" "float"}}
+              TextFormField(
+                controller: _{{.Name | toCamelCase}}Controller,
+                decoration: const InputDecoration(labelText: '{{.Name | toTitleCase}}'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter {{.Name | toLower}}';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              {{- else if eq .Type "password"}}
+              TextFormField(
+                controller: _{{.Name | toCamelCase}}Controller,
+                decoration: const InputDecoration(
+                  labelText: '{{.Name | toTitleCase}}',
+                  suffixIcon: Icon(Icons.lock),
+                ),
+                obscureText: true,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter {{.Name | toLower}}';
+                  }
+                  if (value.length < 6) {
+                    return '{{.Name | toTitleCase}} must be at least 6 characters';
+                  }
+                  return null;
+                },
+              ),
+              {{- else}}
+              TextFormField(
+                controller: _{{.Name | toCamelCase}}Controller,
+                decoration: const InputDecoration(labelText: '{{.Name | toTitleCase}}'),
+                {{- if eq .Name "email"}}
+                keyboardType: TextInputType.emailAddress,
+                {{- end}}
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter {{.Name | toLower}}';
+                  }
+                  {{- if eq .Type "String"}}
+                  {{- if eq .Name "email"}}
+                  if (!GetUtils.isEmail(value)) {
+                    return 'Please enter a valid email';
+                  }
+                  {{- end}}
+                  {{- end}}
+                  return null;
+                },
+              ),
+              {{- end}}
+              const SizedBox(height: 16),
+              {{- end}}
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    final Map<String, dynamic> data = {
+                      {{- range .Fields}}
+                      '{{.Name}}': {{- if eq .Type "DateTime"}}_selected{{.Name | toPascalCase}}.value
+                      {{- else if eq .Type "int"}}int.tryParse(_{{.Name | toCamelCase}}Controller.text)
+                      {{- else if eq .Type "double" "float"}}double.tryParse(_{{.Name | toCamelCase}}Controller.text)
+                      {{- else if eq .Type "bool"}}_is{{.Name | toPascalCase}}.value
+                      {{- else}}_{{.Name | toCamelCase}}Controller.text{{- end}},
+                      {{- end}}
+                    };
+                    
+                    controller.update{{.StructName}}(item.id, data);
+                  }
+                },
+                child: const Text('Update {{.StructName}}'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

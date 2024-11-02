@@ -1,0 +1,132 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../../controllers/bundle_controller.dart';
+import '../../models/bundle.dart';
+
+class {{.PluralName}}SortView extends StatelessWidget {
+  final {{.PluralName}}Controller controller = Get.find();
+
+  {{.PluralName}}SortView({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sort Items'),
+        actions: [
+          Obx(() => controller.isLoading.value
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                  ),
+                )
+              : const SizedBox()),
+        ],
+      ),
+      body: Obx(() {
+        if (controller.items.isEmpty) {
+          return const Center(
+            child: Text('No items to sort'),
+          );
+        }
+
+        return ReorderableListView.builder(
+          padding: const EdgeInsets.all(16),
+          proxyDecorator: (child, index, animation) => Material(
+            elevation: 8,
+            borderRadius: BorderRadius.circular(8),
+            child: child,
+          ),
+          itemCount: controller.items.length,
+          onReorder: (oldIndex, newIndex) {
+            if (newIndex > oldIndex) newIndex--;
+            controller.updateItemOrder(oldIndex, newIndex);
+          },
+          itemBuilder: (context, index) {
+            final item = controller.items[index];
+            return _buildListItem(item, index);
+          },
+        );
+      }),
+    );
+  }
+
+  Widget _buildListItem({{.StructName}} item, int index) {
+    return Card(
+      key: ValueKey(item.id),
+      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 8,
+          ),
+          leading: _buildAvatar(item),
+          title: Text(
+            {{- if .Fields}}
+            {{- with index .Fields 0}}
+            item.{{.Name | toCamelCase}}?.toString() ?? 'No {{.Name}}',
+            {{- end}}
+            {{- else}}
+            'Item ${item.id}',
+            {{- end}}
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          subtitle: Text(
+            {{- if ge (len .Fields) 2}}
+            {{- with index .Fields 1}}
+            item.{{.Name | toCamelCase}}?.toString() ?? 'No {{.Name}}',
+            {{- end}}
+            {{- else}}
+            'Position: ${index + 1}',
+            {{- end}}
+          ),
+          trailing: const Icon(
+            Icons.drag_indicator,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAvatar({{.StructName}} item) {
+    return Hero(
+      tag: 'avatar_${item.id}',
+      child: CircleAvatar(
+        backgroundColor: Colors.blue.shade100,
+        child: Text(
+          {{- if .Fields}}
+          {{- with index .Fields 0}}
+          item.{{.Name | toCamelCase}}?.toString()[0].toUpperCase() ?? '?',
+          {{- end}}
+          {{- else}}
+          item.id.toString()[0],
+          {{- end}}
+          style: TextStyle(
+            color: Colors.blue.shade700,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}

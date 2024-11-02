@@ -1,0 +1,130 @@
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:core/core.dart';
+import '../controllers/{{.StructName | toLower}}_controller.dart';
+import 'mode/grid.dart';
+import 'mode/list.dart';
+{{if .HasSort}}import 'mode/sort.dart';{{end}}
+
+class {{.PluralName}}Index extends GetView<{{.PluralName}}Controller> {
+  {{.PluralName}}Index({super.key});
+
+  final searchController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: _buildAppBar(),
+      body: _buildBody(context),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => Get.toNamed('/{{.LowerPluralStructName}}/create'),
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      title: const Text('{{.PluralName | toUpper}}'),
+      actions: [
+        {{if .HasSort}}
+        IconButton(
+          icon: const Icon(Icons.sort),
+          onPressed: () => _openSortView(),
+          tooltip: 'Sort Items',
+        ),
+        {{end}}
+        Obx(() => IconButton(
+          icon: Icon(controller.isGridView.value ? Icons.list : Icons.grid_view),
+          onPressed: () => controller.isGridView.toggle(),
+          tooltip: controller.isGridView.value ? 'Show as List' : 'Show as Grid',
+        )),
+      ],
+    );
+  }
+
+  {{if .HasSort}}
+  void _openSortView() {
+    Get.to(
+      () => {{.PluralName}}SortView(controller: controller),
+      fullscreenDialog: true,
+    )?.then((_) => controller.refreshData());
+  }
+  {{end}}
+
+  Widget _buildBody(BuildContext context) {
+    return Column(
+      children: [
+        _buildSearchBar(),
+        _buildPagination(),
+        Expanded(
+          child: Obx(() {
+            if (controller.isLoading.value && controller.items.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (controller.items.isEmpty) {
+              return const Center(
+                child: Text('No items found'),
+              );
+            }
+
+            return RefreshIndicator(
+              onRefresh: () => controller.refreshData(),
+              child: controller.isGridView.value
+                ? {{.PluralName}}GridView(controller: controller)
+                : {{.PluralName}}ListView(controller: controller),
+            );
+          }),
+        ),
+        _buildPagination(),
+      ],
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: TextField(
+        controller: searchController,
+        decoration: InputDecoration(
+          hintText: 'Search {{.LowerPluralStructName}}...',
+          prefixIcon: const Icon(Icons.search),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.clear),
+            onPressed: () {
+              searchController.clear();
+              controller.onSearch('');
+            },
+          ),
+        ),
+        onChanged: controller.onSearch,
+      ),
+    );
+  }
+
+  Widget _buildPagination() {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Obx(() => BasePagination(
+        currentPage: controller.currentPage.value,
+        totalPages: controller.totalPages.value,
+        totalItems: controller.totalItems.value,
+        itemsPerPage: controller.itemsPerPage.value,
+        onPageChanged: (page) {
+          controller.currentPage.value = page;
+          controller.loadData();
+        },
+        onRowsPerPageChanged: (value) {
+          if (value != null) {
+            controller.itemsPerPage.value = value;
+            controller.refreshData();
+          }
+        },
+      )),
+    );
+  }
+}

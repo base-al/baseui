@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"unicode"
 
@@ -19,20 +18,45 @@ func init() {
 	pluralizeClient = pluralize.NewClient()
 }
 
-func GetGoType(t string) string {
+func GetDartType(t string) string {
 	switch t {
-	case "int":
+	case "int", "int64", "uint", "uint64":
 		return "int"
 	case "string", "text":
-		return "string"
+		return "String"
 	case "datetime", "time":
-		return "time.Time"
-	case "float":
-		return "float64"
-	case "bool":
+		return "DateTime"
+	case "float", "float64", "double":
+		return "double"
+	case "bool", "boolean":
 		return "bool"
+	case "list":
+		return "List<dynamic>"
+	case "map":
+		return "Map<String, dynamic>"
+	case "binary", "blob":
+		return "Uint8List"
+	case "decimal":
+		return "Decimal"
+	case "json":
+		return "Map<String, dynamic>"
 	default:
 		return t
+	}
+}
+
+func GetInputType(dartType string) string {
+	switch dartType {
+	case "int":
+		return "number"
+	case "double":
+		return "number"
+	case "bool":
+		return "checkbox"
+	case "DateTime":
+		return "datetime-local"
+	default:
+		return "text"
 	}
 }
 
@@ -40,12 +64,12 @@ func ToLower(s string) string {
 	return strings.ToLower(s)
 }
 
-func ToTitle(s string) string {
-	return cases.Title(language.Und).String(s)
+func ToUpper(s string) string {
+	return strings.ToUpper(s)
 }
 
-func ToLowerPlural(s string) string {
-	return strings.ToLower(pluralizeClient.Plural(s))
+func ToTitle(s string) string {
+	return cases.Title(language.Und).String(s)
 }
 
 func ToSnakeCase(s string) string {
@@ -75,6 +99,10 @@ func ToPascalCase(s string) string {
 	return strings.Join(words, "")
 }
 
+func ToPlural(s string) string {
+	return pluralizeClient.Plural(s)
+}
+
 func splitIntoWords(s string) []string {
 	var words []string
 	var currentWord strings.Builder
@@ -97,274 +125,92 @@ func splitIntoWords(s string) []string {
 	}
 	return words
 }
-
-func ToPlural(s string) string {
-	return pluralizeClient.Plural(s)
-}
-
-func GetInputType(goType string) string {
-	switch goType {
-	case "int", "int64", "uint", "uint64":
-		return "number"
-	case "float64":
-		return "number"
-	case "bool":
-		return "checkbox"
-	case "time.Time":
-		return "datetime-local"
-	default:
-		return "text"
-	}
-}
-
-func UpdateInitFile(singularName, pluralName string) error {
-	initFilePath := "app/init.go"
-
-	content, err := os.ReadFile(initFilePath)
+func UpdateFlutterRoutes(singularName, pluralName string) error {
+	// Update main routes.dart
+	mainRoutesFile := "lib/app/routes.dart"
+	content, err := os.ReadFile(mainRoutesFile)
 	if err != nil {
 		return err
 	}
 
-	packageName := ToSnakeCase(singularName)
+	pluralSnake := ToSnakeCase(pluralName)
 
-	importStr := fmt.Sprintf("\"base/app/%s\"", packageName)
-	content, importAdded := AddImport(content, importStr)
+	// Add import for module routes
+	importStr := fmt.Sprintf(`import '../modules/%s/routes.dart';`, pluralSnake)
+	content = addFlutterImport(content, importStr)
 
-	content, initializerAdded := AddModuleInitializer(content, packageName, singularName)
+	// Add module routes to AppPages
+	routeStr := fmt.Sprintf(`...%sRoutes.routes,`, pluralName)
+	content = addRoutesToAppPages(content, routeStr)
 
-	if importAdded || initializerAdded {
-		return os.WriteFile(initFilePath, content, 0644)
+	if err := os.WriteFile(mainRoutesFile, content, 0644); err != nil {
+		return fmt.Errorf("error writing routes file: %v", err)
 	}
 
-	return nil
+	// Update navbar.dart
+	navbarFile := "lib/app/navbar.dart"
+	navContent, err := os.ReadFile(navbarFile)
+	if err != nil {
+		return err
+	}
+
+	// Add import statements
+	navContent = addFlutterImport(navContent, fmt.Sprintf(`import '../modules/%s/routes.dart';`, pluralSnake))
+
+	// Add nav item
+	navItem := fmt.Sprintf(`  NavLink(
+    icon: Icon(Icons.list),
+    label: '%s',
+    path: %sRoute.list,
+  ),`, pluralName, pluralName)
+
+	navContent = addNavItem(navContent, navItem)
+
+	return os.WriteFile(navbarFile, navContent, 0644)
 }
 
-func AddImport(content []byte, importStr string) ([]byte, bool) {
+func addNavItem(content []byte, navItem string) []byte {
+	if bytes.Contains(content, []byte(navItem)) {
+		return content
+	}
+
+	// Find end of destinations array
+	marker := []byte("];")
+	if idx := bytes.LastIndex(content, marker); idx != -1 {
+		// Insert before the closing bracket
+		return append(content[:idx], append([]byte(navItem+"\n"), content[idx:]...)...)
+	}
+
+	return content
+}
+func addRoutesToAppPages(content []byte, routeStr string) []byte {
+	if bytes.Contains(content, []byte(routeStr)) {
+		return content
+	}
+
+	// Find "// MODULE PAGES" marker
+	marker := []byte("// MODULE PAGES")
+	if idx := bytes.Index(content, marker); idx != -1 {
+		// Insert at the marker position
+		insertStr := []byte(routeStr + "\n")
+		return append(content[:idx], append(insertStr, content[idx:]...)...)
+	}
+
+	return content
+}
+
+func addFlutterImport(content []byte, importStr string) []byte {
 	if bytes.Contains(content, []byte(importStr)) {
-		return content, false
+		return content
 	}
 
-	importPos := bytes.Index(content, []byte("import ("))
-	if importPos == -1 {
-		return content, false
+	// Find "// MODULE IMPORTS" marker
+	marker := []byte("// MODULE IMPORTS")
+	if idx := bytes.Index(content, marker); idx != -1 {
+		// Insert before the marker
+		insertStr := []byte(importStr + "\n")
+		return append(content[:idx], append(insertStr, content[idx:]...)...)
 	}
 
-	insertPos := importPos + len("import (") + 1
-
-	newImportLine := []byte("\t" + importStr + "\n")
-
-	updatedContent := append(content[:insertPos], append(newImportLine, content[insertPos:]...)...)
-
-	return updatedContent, true
-}
-
-func AddModuleInitializer(content []byte, packageName, singularName string) ([]byte, bool) {
-	contentStr := string(content)
-
-	markerIndex := strings.Index(contentStr, "// MODULE_INITIALIZER_MARKER")
-	if markerIndex == -1 {
-		return content, false
-	}
-
-	if strings.Contains(contentStr[:markerIndex], fmt.Sprintf(`"%s":`, packageName)) {
-		return content, false
-	}
-
-	structName := ToPascalCase(singularName)
-
-	newInitializer := fmt.Sprintf(`	"%s": func(db *gorm.DB, router *gin.RouterGroup) module.Module { return %s.New%sModule(db, router) },`,
-		packageName, packageName, structName)
-
-	updatedContent := contentStr[:markerIndex] + newInitializer + "\n        " + contentStr[markerIndex:]
-
-	return []byte(updatedContent), true
-}
-
-func UpdateNavFile(pluralName string) {
-	navFilePath := "admin/partials/nav.html"
-	content, err := os.ReadFile(navFilePath)
-	if err != nil {
-		fmt.Printf("Error reading nav file: %v\n", err)
-		return
-	}
-
-	insertPos := bytes.Index(content, []byte(`<li class="auth-only"><a href="#" data-page="dashboard">Dashboard</a></li>`))
-	if insertPos == -1 {
-		fmt.Println("Could not find the correct position to insert the new menu item")
-		return
-	}
-
-	insertPos = bytes.IndexByte(content[insertPos:], '\n') + insertPos + 1
-
-	newMenuItem := fmt.Sprintf(`		<li class="auth-only"><a href="#" data-page="%s">%s</a></li>`, pluralName, ToTitle(pluralName))
-
-	updatedContent := append(content[:insertPos], append([]byte(newMenuItem+"\n"), content[insertPos:]...)...)
-
-	if err := os.WriteFile(navFilePath, updatedContent, 0644); err != nil {
-		fmt.Printf("Error writing updated nav file: %v\n", err)
-	}
-}
-
-func UpdateIndexFile(pluralName string) {
-	indexFilePath := "admin/index.html"
-	content, err := os.ReadFile(indexFilePath)
-	if err != nil {
-		fmt.Printf("Error reading index file: %v\n", err)
-		return
-	}
-
-	markerComment := []byte("//LoadGeneratedPage")
-	insertPos := bytes.Index(content, markerComment)
-	if insertPos == -1 {
-		fmt.Println("Could not find the marker comment to insert the new case")
-		return
-	}
-
-	newCase := fmt.Sprintf(`
-						case '%s':
-						$('#main-content').load('/admin/%s/index.html');
-						break;
-						`, pluralName, pluralName)
-
-	updatedContent := append(content[:insertPos], append([]byte(newCase), content[insertPos:]...)...)
-
-	if err := os.WriteFile(indexFilePath, updatedContent, 0644); err != nil {
-		fmt.Printf("Error writing updated index file: %v\n", err)
-	}
-}
-
-func UpdateInitFileForDestroy(pluralName string) error {
-	initFilePath := "app/init.go"
-
-	content, err := os.ReadFile(initFilePath)
-	if err != nil {
-		return err
-	}
-
-	importStr := fmt.Sprintf("\"base/app/%s\"", pluralName)
-	content = RemoveImport(content, importStr)
-
-	content = RemoveModuleInitializer(content, pluralName)
-
-	return os.WriteFile(initFilePath, content, 0644)
-}
-
-func RemoveImport(content []byte, importStr string) []byte {
-	lines := bytes.Split(content, []byte("\n"))
-	var newLines [][]byte
-
-	for _, line := range lines {
-		if !bytes.Contains(line, []byte(importStr)) {
-			newLines = append(newLines, line)
-		}
-	}
-
-	return bytes.Join(newLines, []byte("\n"))
-}
-
-func RemoveModuleInitializer(content []byte, pluralName string) []byte {
-	lines := bytes.Split(content, []byte("\n"))
-	var newLines [][]byte
-
-	for _, line := range lines {
-		if !bytes.Contains(line, []byte(fmt.Sprintf(`"%s":`, pluralName))) {
-			newLines = append(newLines, line)
-		}
-	}
-
-	return bytes.Join(newLines, []byte("\n"))
-}
-
-func UpdateSeedersFile(structName, packageName string) error {
-	seedFilePath := "app/init.go"
-
-	content, err := os.ReadFile(seedFilePath)
-	if err != nil {
-		return err
-	}
-
-	importStr := fmt.Sprintf("\"base/app/%s\"", packageName)
-	content, importAdded := AddImport(content, importStr)
-
-	content, seederAdded := AddSeederInitializer(content, structName, packageName)
-
-	if importAdded || seederAdded {
-		return os.WriteFile(seedFilePath, content, 0644)
-	}
-
-	return nil
-}
-func AddSeederInitializer(content []byte, structName, packageName string) ([]byte, bool) {
-	markerComment := []byte("// SEEDER_INITIALIZER_MARKER")
-	markerIndex := bytes.Index(content, markerComment)
-	if markerIndex == -1 {
-		return content, false
-	}
-
-	// Find the start of the line containing the marker
-	lineStart := bytes.LastIndex(content[:markerIndex], []byte("\n")) + 1
-
-	seederLine := fmt.Sprintf("&%s.%sSeeder{},", packageName, structName)
-	if bytes.Contains(content, []byte(seederLine)) {
-		return content, false
-	}
-
-	// Create the new seeder line with proper indentation
-	newSeeder := []byte(fmt.Sprintf("\t\t%s\n\t\t", seederLine))
-
-	// Insert the new seeder line just before the marker comment
-	updatedContent := append(content[:lineStart], append(newSeeder, content[lineStart:]...)...)
-
-	return updatedContent, true
-}
-
-func RemoveSeederFromSeedFile(pluralName string) error {
-	seedFilePath := "app/init.go"
-
-	content, err := os.ReadFile(seedFilePath)
-	if err != nil {
-		return err
-	}
-
-	content = RemoveImport(content, fmt.Sprintf("\"base/app/%s\"", pluralName))
-
-	content = RemoveSeederInitializer(content, pluralName)
-
-	return os.WriteFile(seedFilePath, content, 0644)
-}
-func RemoveSeederInitializer(content []byte, pluralName string) []byte {
-	lines := bytes.Split(content, []byte("\n"))
-	var newLines [][]byte
-
-	for _, line := range lines {
-		if !bytes.Contains(line, []byte(fmt.Sprintf("&%s.", pluralName))) {
-			newLines = append(newLines, line)
-		}
-	}
-
-	return bytes.Join(newLines, []byte("\n"))
-}
-
-func runMainWithArgument(argument string) {
-	// Check if main.go exists in the current directory
-	if _, err := os.Stat("main.go"); os.IsNotExist(err) {
-		fmt.Println("Error: main.go not found in the current directory.")
-		fmt.Println("Make sure you are in the root directory of your Base project.")
-		return
-	}
-
-	// Split the argument string into separate arguments
-	args := append([]string{"run", "main.go"}, strings.Split(argument, " ")...)
-
-	// Run "go run main.go" with the given arguments
-	goCmd := exec.Command("go", args...)
-	goCmd.Stdout = os.Stdout
-	goCmd.Stderr = os.Stderr
-
-	fmt.Printf("Running %s operation...\n", strings.Split(argument, " ")[0])
-	err := goCmd.Run()
-	if err != nil {
-		fmt.Printf("Error running %s operation: %v\n", strings.Split(argument, " ")[0], err)
-		return
-	}
+	return content
 }

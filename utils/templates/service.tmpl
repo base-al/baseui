@@ -1,152 +1,139 @@
-package {{.PackageName}}
+import 'package:flutter/foundation.dart';
+import 'package:core/core.dart';
+import 'package:get/get_connect/http/src/request/request.dart';
+import 'package:get/get_connect/http/src/response/response.dart';
+import '../models/{{.StructName | toLower}}.dart';
 
-import (
-    "errors"
-    "math"
+class {{.StructName}}Service extends BaseConnect {
+  @override
+  void onInit() {
+    super.onInit();
+    httpClient.addResponseModifier(_logResponse);
+  }
 
-    "gorm.io/gorm"
-    "gorm.io/gorm/clause"
-    "base/app/models"
-    "base/core/types"
-)
+  Response _logResponse(Request request, Response response) {
+    debugPrint('API Request: ${request.method} ${request.url}');
+    debugPrint('Response Status: ${response.statusCode}');
+    debugPrint('Response Body: ${response.body}');
+    return response;
+  }
 
-type {{.StructName}}Service struct {
-    DB *gorm.DB
-}
+  Future<Response<Map<String, dynamic>>> get{{.PluralName}}({
+    int page = 1,
+    int limit = 10,
+    String search = '',
+  }) async {
+    try {
+      final response = await get<Map<String, dynamic>>('/{{.LowerPluralStructName}}', query: {
+        'page': '$page',
+        'limit': '$limit',
+        if (search.trim().isNotEmpty) 'search': search.trim(),
+      });
 
-func New{{.StructName}}Service(db *gorm.DB) *{{.StructName}}Service {
-    return &{{.StructName}}Service{
-        DB: db,
-    }
-}
+      if (response.status.hasError) {
+        return _handleListError(page, limit, response);
+      }
 
-func (s *{{.StructName}}Service) Create(req *models.Create{{.StructName}}Request) (*models.{{.StructName}}, error) {
-    item := models.{{.StructName}}{
-        {{- range .Fields}}
-        {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-        {{.Name}}ID: req.{{.Name}}ID,
-        {{- else if or (eq .Relationship "has_one") (eq .Relationship "hasOne")}}
-        {{.Name}}: req.{{.Name}},
-        {{- else if ne .Relationship "has_many"}}
-        {{.Name}}: req.{{.Name}},
-        {{- end}}
-        {{- end}}
+      return response;
+    } catch (e) {
+      return _handleListError(page, limit, null, error: e);
     }
-    if err := s.DB.Create(&item).Error; err != nil {
-        return nil, err
-    }
-    return s.GetByID(item.ID)
-}
+  }
 
-func (s *{{.StructName}}Service) Update(id uint, req *models.Update{{.StructName}}Request) (*models.{{.StructName}}, error) {
-    item, err := s.GetByID(id)
-    if err != nil {
-        return nil, err
+  Future<Response> get{{.StructName}}(int id) async {
+    try {
+      final response = await get('/{{.LowerPluralStructName}}/$id');
+      return _handleResponse(response, 'fetching {{.StructName | toLower}}');
+    } catch (e) {
+      return _handleError(e, 'fetching {{.StructName | toLower}}');
     }
-    {{- range .Fields}}
-    {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-    if req.{{.Name}}ID != nil {
-        item.{{.Name}}ID = *req.{{.Name}}ID
-    }
-    {{- else if or (eq .Relationship "has_one") (eq .Relationship "hasOne")}}
-    if req.{{.Name}} != nil {
-        item.{{.Name}} = *req.{{.Name}}
-    }
-    {{- else if ne .Relationship "has_many"}}
-    if req.{{.Name}} != nil {
-        item.{{.Name}} = *req.{{.Name}}
-    }
-    {{- end}}
-    {{- end}}
-    if err := s.DB.Save(item).Error; err != nil {
-        return nil, err
-    }
-    return s.GetByID(id)
-}
+  }
 
-func (s *{{.StructName}}Service) GetByID(id uint) (*models.{{.StructName}}, error) {
-    var item models.{{.StructName}}
-    if err := s.DB.Preload(clause.Associations).First(&item, id).Error; err != nil {
-        return nil, err
+  Future<Response> create{{.StructName}}({{.StructName}} {{.StructName | toLower}}) async {
+    try {
+      final response = await post('/{{.LowerPluralStructName}}', {{.StructName | toLower}}.toJson());
+      return _handleResponse(response, 'creating {{.StructName | toLower}}');
+    } catch (e) {
+      return _handleError(e, 'creating {{.StructName | toLower}}');
     }
-    return &item, nil
-}
+  }
 
-func (s *{{.StructName}}Service) GetAll(page *int, limit *int) (*types.PaginatedResponse, error) {
-    if page != nil && limit != nil {
-        var items []*models.{{.StructName}}
-        paginatedResponse, err := paginate(s.DB, *page, *limit, &items)
-        if err != nil {
-            return nil, err
-        }
-        return &paginatedResponse, nil
+  Future<Response> update{{.StructName}}(int id, {{.StructName}} {{.StructName | toLower}}) async {
+    try {
+      final response = await put('/{{.LowerPluralStructName}}/$id', {{.StructName | toLower}}.toJson());
+      return _handleResponse(response, 'updating {{.StructName | toLower}}');
+    } catch (e) {
+      return _handleError(e, 'updating {{.StructName | toLower}}');
     }
+  }
 
-    var allItems []*models.{{.StructName}}
-    if err := s.DB.Preload(clause.Associations).Find(&allItems).Error; err != nil {
-        return nil, err
+  Future<Response> delete{{.StructName}}(int id) async {
+    try {
+      final response = await delete('/{{.LowerPluralStructName}}/$id');
+      return _handleResponse(response, 'deleting {{.StructName | toLower}}');
+    } catch (e) {
+      return _handleError(e, 'deleting {{.StructName | toLower}}');
     }
+  }
 
-    response := types.PaginatedResponse{
-        Data: allItems,
-        Pagination: types.Pagination{
-            Total:      int64(len(allItems)),
-            Page:       1,
-            PageSize:   len(allItems),
-            TotalPages: 1,
+  Future<Response> getSorted() async {
+    try {
+      final response = await get('/{{.LowerPluralStructName}}/sorted');
+      return _handleResponse(response, 'fetching sorted {{.LowerPluralStructName}}');
+    } catch (e) {
+      return _handleError(e, 'fetching sorted {{.LowerPluralStructName}}');
+    }
+  }
+
+  Future<Response> updateSort(List<int> sortedIds) async {
+    try {
+      debugPrint('Sending sortedIds: $sortedIds');
+      final response = await put(
+        '/{{.LowerPluralStructName}}/sort',
+        sortedIds,  // Send the array directly, not wrapped in an object
+        headers: {'Content-Type': 'application/json'},
+      );
+      return _handleResponse(response, 'updating sort order');
+    } catch (e) {
+      return _handleError(e, 'updating sort order');
+    }
+  }
+
+
+  Response _handleResponse(Response response, String operation) {
+    if (!response.isOk) {
+      throw Exception('Error $operation: ${response.statusText}');
+    }
+    return response;
+  }
+
+  Response _handleError(dynamic error, String operation) {
+    debugPrint('Error in $operation: $error');
+    return Response(
+      statusCode: 500,
+      statusText: 'Error $operation: $error',
+    );
+  }
+
+  Response<Map<String, dynamic>> _handleListError(
+    int page,
+    int limit,
+    Response? response, {
+    dynamic error,
+  }) {
+    debugPrint('Error: ${error ?? response?.statusText}');
+    return Response(
+      statusCode: response?.statusCode ?? 500,
+      statusText: response?.statusText ?? error.toString(),
+      body: {
+        'data': [],
+        'pagination': {
+          'total': 0,
+          'page': page,
+          'page_size': limit,
+          'total_pages': 0,
         },
-    }
-
-    return &response, nil
-}
-
-func (s *{{.StructName}}Service) Delete(id uint) error {
-    result := s.DB.Delete(&models.{{.StructName}}{}, id)
-    if result.Error != nil {
-        return result.Error
-    }
-    if result.RowsAffected == 0 {
-        return errors.New("item not found")
-    }
-    return nil
-}
-
-func (s *{{.StructName}}Service) GetAssociated(id uint, associationName string) (interface{}, error) {
-    item, err := s.GetByID(id)
-    if err != nil {
-        return nil, err
-    }
-
-    var associated interface{}
-    if err := s.DB.Model(item).Association(associationName).Find(&associated); err != nil {
-        return nil, err
-    }
-
-    return associated, nil
-}
-
-func paginate(db *gorm.DB, page, limit int, out interface{}) (types.PaginatedResponse, error) {
-    var total int64
-    if err := db.Model(&models.{{.StructName}}{}).Count(&total).Error; err != nil {
-        return types.PaginatedResponse{}, err
-    }
-
-    totalPages := int(math.Ceil(float64(total) / float64(limit)))
-    offset := (page - 1) * limit
-
-    if err := db.Preload(clause.Associations).Limit(limit).Offset(offset).Find(out).Error; err != nil {
-        return types.PaginatedResponse{}, err
-    }
-
-    pagination := types.Pagination{
-        Total:      total,
-        Page:       page,
-        PageSize:   limit,
-        TotalPages: totalPages,
-    }
-
-    return types.PaginatedResponse{
-        Data:       out,
-        Pagination: pagination,
-    }, nil
+      },
+    );
+  }
 }

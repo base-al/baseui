@@ -1,0 +1,135 @@
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+
+import '../controllers/{{.StructName | toLower}}_controller.dart';
+import '../models/{{.StructName | toLower}}.dart';
+
+class {{.StructName}}Show extends GetView<{{.PluralName}}Controller> {
+  const {{.StructName}}Show({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final {{.StructName}} {{.StructName | toLower}} = Get.arguments;
+    {{$name := .StructName | toLower}}
+    {{$firstField := index .Fields 0}}
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('{{.StructName}} Details: ' + {{$name}}.{{$firstField.Name | toCamelCase}}.toString()),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit),
+            onPressed: () => Get.toNamed(
+              '/{{.LowerPluralStructName}}/edit/' + {{$name}}.id.toString(),
+              arguments: {{$name}},
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete),
+            onPressed: () => Get.dialog(
+              AlertDialog(
+                title: const Text('Confirm Delete'),
+                content: Text(
+                  'Are you sure you want to delete ' + {{$name}}.{{$firstField.Name | toCamelCase}}.toString() + '?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Get.back(),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Get.back();
+                      controller.delete{{.StructName}}({{$name}}.id);
+                      Get.back();
+                    },
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInfoCard(
+              context,
+              title: 'Basic Information',
+              children: [
+                _buildInfoRow('ID', {{$name}}.id.toString()),
+                {{range .Fields}}_buildInfoRow('{{.Name}}', {{$name}}.{{.Name | toCamelCase}}?.toString() ?? 'N/A'),
+                {{end}}
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildInfoCard(
+              context,
+              title: 'Additional Details',
+              children: [
+                _buildInfoRow(
+                  'Created At',
+                  {{$name}}.createdAt.toLocal().toString(),
+                ),
+                _buildInfoRow(
+                  'Updated At',
+                  {{$name}}.updatedAt.toLocal().toString(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(
+    BuildContext context, {
+    required String title,
+    required List<Widget> children,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+}

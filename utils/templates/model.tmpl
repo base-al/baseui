@@ -1,107 +1,139 @@
-package models
+import 'package:flutter/material.dart';
 
-import (
-    "time"
-    "gorm.io/gorm"
-)
-type {{.StructName}} struct {
-    gorm.Model
+class {{.StructName}} {
+  final int id;
+  final DateTime? deletedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  {{range .Fields}}
+  final {{.Type}}? {{.Name | toCamelCase}};
+  {{- end}}
+
+  {{.StructName}}({
+    required this.id,
+    this.deletedAt,
+    required this.createdAt,
+    required this.updatedAt,
     {{- range .Fields}}
-    {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-    {{.Name}}ID uint `json:"{{.JSONName}}" gorm:"column:{{.DBName}}"`
-    {{.Name}} *{{.AssociatedType}} `json:"{{.Name | toLower}},omitempty" gorm:"foreignKey:{{.Name}}ID"`
-    {{- else if or (eq .Relationship "has_one") (eq .Relationship "hasOne")}}
-    {{.Name}} *{{.AssociatedType}} `json:"{{.JSONName}},omitempty" gorm:"foreignKey:{{$.StructName}}ID"`
-    {{- else if or (eq .Relationship "has_many") (eq .Relationship "hasMany")}}
-    {{.Name}} []*{{.AssociatedType}} `json:"{{.JSONName}},omitempty" gorm:"foreignKey:{{$.StructName}}ID"`
-    {{- else}}
-    {{.Name}} {{.Type}} `json:"{{.JSONName}}" gorm:"column:{{.DBName}}"`
+    this.{{.Name | toCamelCase}},
     {{- end}}
-    {{- end}}
-}
+  });
 
-type Create{{.StructName}}Request struct {
-    {{- range .Fields}}
-    {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-    {{.Name}}ID uint `json:"{{.JSONName}}"`
-    {{- else if ne (or (eq .Relationship "has_many") (eq .Relationship "hasMany")) true }}
-    {{.Name}} {{.Type}} `json:"{{.JSONName}}"`
-    {{- end}}
-    {{- end}}
-}
+  factory {{.StructName}}.fromJson(Map<String, dynamic> json) {
+    try {
+      debugPrint('Parsing JSON: $json');
 
-type Update{{.StructName}}Request struct {
-    {{- range .Fields}}
-    {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-    {{.Name}}ID *uint `json:"{{.JSONName}},omitempty"`
-    {{- else if ne (or (eq .Relationship "has_many") (eq .Relationship "hasMany")) true }}
-    {{.Name}} *{{.Type}} `json:"{{.JSONName}},omitempty"`
-    {{- end}}
-    {{- end}}
-}
+      // Helper function to get field value checking both cases
+      T? getField<T>(String fieldName) {
+        return json[fieldName] as T? ?? json[fieldName.toLowerCase()] as T?;
+      }
 
-type {{.StructName}}Response struct {
-    ID        uint      `json:"id"`
-    CreatedAt time.Time `json:"createdAt"`
-    UpdatedAt time.Time `json:"updatedAt"`
-    {{- range .Fields}}
-    {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-    {{.Name}}ID uint `json:"{{.JSONName}}"`
-    {{.Name}} *{{.AssociatedType}}Response `json:"{{.Name | toLower}},omitempty"`
-    {{- else if or (eq .Relationship "has_one") (eq .Relationship "hasOne")}}
-    {{.Name}} *{{.AssociatedType}}Response `json:"{{.JSONName}},omitempty"`
-    {{- else if or (eq .Relationship "has_many") (eq .Relationship "hasMany")}}
-    {{.Name}} []{{.AssociatedType}}Response `json:"{{.JSONName}},omitempty"`
-    {{- else}}
-    {{.Name}} {{.Type}} `json:"{{.JSONName}}"`
-    {{- end}}
-    {{- end}}
-}
-func ({{.StructName}}) TableName() string {
-    return "{{.TableName}}"
-}
-
-func (item *{{.StructName}}) ToResponse() *{{.StructName}}Response {
-    if item == nil {
-        return nil
-    }
-
-    response := &{{.StructName}}Response{
-        ID:        item.ID,
-        CreatedAt: item.CreatedAt,
-        UpdatedAt: item.UpdatedAt,
-        {{- range .Fields}}
-        {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo")}}
-        {{.Name}}ID: item.{{.Name}}ID,
-        {{.Name}}: item.{{.Name}}.ToResponse(),
-        {{- else if or (eq .Relationship "has_one") (eq .Relationship "hasOne")}}
-        {{.Name}}: item.{{.Name}}.ToResponse(),
-        {{- else if or (eq .Relationship "has_many") (eq .Relationship "hasMany")}}
-        {{.Name}}: make([]{{.AssociatedType}}Response, len(item.{{.Name}})),
-        {{- else}}
-        {{.Name}}: item.{{.Name}},
-        {{- end}}
-        {{- end}}
-    }
-
-    {{- range .Fields}}
-    {{- if or (eq .Relationship "has_many") (eq .Relationship "hasMany")}}
-    for i, v := range item.{{.Name}} {
-        if v != nil {
-            response.{{.Name}}[i] = *v.ToResponse()
+      // Helper function for DateTime fields
+      DateTime? parseDateTime(String fieldName) {
+        final value = json[fieldName] ?? json[fieldName.toLowerCase()];
+        if (value == null || value == '0001-01-01T00:00:00Z') {
+          return null;
         }
+        return DateTime.parse(value as String);
+      }
+
+      return {{.StructName}}(
+        id: getField<int>('ID') ?? getField<int>('id') ?? 0,
+        deletedAt: parseDateTime('DeletedAt') ?? parseDateTime('deleted_at'),
+        createdAt: parseDateTime('CreatedAt') ?? parseDateTime('created_at') ?? DateTime.now(),
+        updatedAt: parseDateTime('UpdatedAt') ?? parseDateTime('updated_at') ?? DateTime.now(),
+        {{- range .Fields}}
+        {{- if eq .Type "DateTime"}}
+        {{.Name | toCamelCase}}: parseDateTime('{{.JSONName}}'),
+        {{- else if eq .Type "int"}}
+        {{.Name | toCamelCase}}: getField<int>('{{.JSONName}}'),
+        {{- else if eq .Type "double" "float"}}
+        {{.Name | toCamelCase}}: getField<double>('{{.JSONName}}'),
+        {{- else if eq .Type "bool"}}
+        {{.Name | toCamelCase}}: getField<bool>('{{.JSONName}}'),
+        {{- else}}
+        {{.Name | toCamelCase}}: getField<String>('{{.JSONName}}') ?? '',
+        {{- end}}
+        {{- end}}
+      );
+    } catch (e, stackTrace) {
+      debugPrint('Error creating {{.StructName}} from JSON: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
     }
-    {{- end}}
-    {{- end}}
+  }
 
-    return response
-}
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'deleted_at': deletedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      {{- range .Fields}}
+      '{{.JSONName}}': {{.Name | toCamelCase}},
+      {{- end}}
+    };
+  }
 
-func (item *{{.StructName}}) Preload(db *gorm.DB) *gorm.DB {
+  {{.StructName}} copyWith({
+    int? id,
+    DateTime? deletedAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
     {{- range .Fields}}
-    {{- if or (eq .Relationship "belongs_to") (eq .Relationship "belongsTo") (eq .Relationship "has_one") (eq .Relationship "hasOne") (eq .Relationship "has_many") (eq .Relationship "hasMany")}}
-    db = db.Preload("{{.Name}}")
+    {{.Type}}? {{.Name | toCamelCase}},
     {{- end}}
+  }) {
+    return {{.StructName}}(
+      id: id ?? this.id,
+      deletedAt: deletedAt ?? this.deletedAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      {{- range .Fields}}
+      {{.Name | toCamelCase}}: {{.Name | toCamelCase}} ?? this.{{.Name | toCamelCase}},
+      {{- end}}
+    );
+  }
+
+  factory {{.StructName}}.empty() {
+    return {{.StructName}}(
+      id: 0,
+      deletedAt: null,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      {{- range .Fields}}
+      {{- if eq .Type "String"}}
+      {{.Name | toCamelCase}}: '',
+      {{- else if eq .Type "int"}}
+      {{.Name | toCamelCase}}: 0,
+      {{- else if eq .Type "double"}}
+      {{.Name | toCamelCase}}: 0.0,
+      {{- else if eq .Type "bool"}}
+      {{.Name | toCamelCase}}: false,
+      {{- else if eq .Type "DateTime"}}
+      {{.Name | toCamelCase}}: null,
+      {{- else}}
+      {{.Name | toCamelCase}}: null,
+      {{- end}}
+      {{- end}}
+    );
+  }
+
+  factory {{.StructName}}.create({
+    {{- range .Fields}}
+    {{.Type}}? {{.Name | toCamelCase}},
     {{- end}}
-    return db
+  }) {
+    return {{.StructName}}(
+      id: 0,
+      deletedAt: null,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      {{- range .Fields}}
+      {{.Name | toCamelCase}}: {{.Name | toCamelCase}} ?? {{- if eq .Type "String"}}''{{- else if eq .Type "int"}}0{{- else if eq .Type "double"}}0.0{{- else if eq .Type "bool"}}false{{- else}}null{{- end}},
+      {{- end}}
+    );
+  }
+
+  bool get isDeleted => deletedAt != null;
 }

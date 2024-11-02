@@ -1,0 +1,13 @@
+import 'package:get/get.dart';
+import '../controllers/{{.StructName | toLower}}_controller.dart';
+import '../services/{{.StructName | toLower}}_service.dart';
+
+class {{.PluralName}}Binding extends Bindings {
+  @override
+  void dependencies() {
+    Get.lazyPut<{{.StructName}}Service>(() => {{.StructName}}Service());
+    Get.lazyPut<{{.PluralName}}Controller>(
+      () => {{.PluralName}}Controller({{.StructName | toLower}}Service: Get.find()),
+    );
+  }
+}
