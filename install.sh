@@ -24,8 +24,8 @@ curl -L "$REPO_URL" -o "$INSTALL_DIR/baseui.zip" || { echo "Failed to download r
 
 echo "Extracting the repository..."
 unzip "$INSTALL_DIR/baseui.zip" -d "$INSTALL_DIR" || { echo "Failed to extract repository."; exit 1; }
-mv "$INSTALL_DIR"/cmd-main/* "$INSTALL_DIR" || { echo "Failed to move files."; exit 1; }
-rm -rf "$INSTALL_DIR/cmd-main" "$INSTALL_DIR/baseui.zip"
+mv "$INSTALL_DIR"/baseui-main/* "$INSTALL_DIR" || { echo "Failed to move files."; exit 1; }
+rm -rf "$INSTALL_DIR/baseui-main" "$INSTALL_DIR/baseui.zip"
 
 # Step 4: Initialize and tidy up the module
 echo "Initializing and tidying module..."
