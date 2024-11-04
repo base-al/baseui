@@ -10,8 +10,8 @@ import (
 
 var upgradeCmd = &cobra.Command{
 	Use:   "upgrade",
-	Short: "Upgrade Base to the latest version",
-	Long:  `Upgrade Base to the latest version by re-running the installation script.`,
+	Short: "Upgrade BaseUI to the latest version",
+	Long:  `Upgrade BaseUI to the latest version by re-running the installation script.`,
 	Run:   upgradeBase,
 }
 
@@ -20,13 +20,13 @@ func init() {
 }
 
 func upgradeBase(cmd *cobra.Command, args []string) {
-	fmt.Println("Upgrading Base to the latest version...")
+	fmt.Println("Upgrading BaseUI to the latest version...")
 
 	// Define the installation script URL
-	scriptURL := "https://raw.githubusercontent.com/base-go/cmd/main/install.sh"
+	scriptURL := "https://raw.githubusercontent.com/base-al/baseui/refs/heads/main/install.sh"
 
 	// Create a temporary file to store the script
-	tmpFile, err := os.CreateTemp("", "base-install-*.sh")
+	tmpFile, err := os.CreateTemp("", "baseui-install-*.sh")
 	if err != nil {
 		fmt.Printf("Error creating temporary file: %v\n", err)
 		return
