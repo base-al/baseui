@@ -49,9 +49,9 @@ class {{.StructName}}Service extends BaseConnect {
     }
   }
 
-  Future<Response> create{{.StructName}}({{.StructName}} {{.StructName | toLower}}) async {
+  Future<Response> create{{.StructName}}({{.StructName}} {{.StructName | toLower}}Data) async {
     try {
-      final response = await post('/{{.LowerPluralStructName}}', {{.StructName | toLower}}.toJson());
+      final response = await post('/{{.LowerPluralStructName}}', {{.StructName | toLower}}Data.toJson());
       return _handleResponse(response, 'creating {{.StructName | toLower}}');
     } catch (e) {
       return _handleError(e, 'creating {{.StructName | toLower}}');

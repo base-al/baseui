@@ -124,6 +124,7 @@ func GenerateFileFromTemplate(dir, filename, templateFile string, data map[strin
 
 	return nil
 }
+
 func ParseTemplate(name, content string) (*template.Template, error) {
 	funcMap := template.FuncMap{
 		"toLower":      ToLower,

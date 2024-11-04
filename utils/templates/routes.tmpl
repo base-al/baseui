@@ -28,11 +28,13 @@ class {{.PluralName}}Routes {
       page: () =>  const {{.StructName}}Show(),
       binding: {{.PluralName}}Binding(),
     ),
+    {{if .HasSort}}
     BaseRoute(
       name: {{.PluralName}}Route.sort,
       page: () =>  {{.StructName}}SortView(),
       binding: {{.PluralName}}Binding(),
     ),
+    {{end}}
   ];
 }
 
@@ -43,7 +45,9 @@ abstract class {{.PluralName}}Route {
   static const create = '/{{.LowerPluralStructName}}/create';
   static const edit = '/{{.LowerPluralStructName}}/edit/:id';
   static const show = '/{{.LowerPluralStructName}}/show/:id';
+  {{if .HasSort}}
   static const sort = '/{{.LowerPluralStructName}}/sort';
+  {{end}}
   // Helper methods for dynamic routes
   static String editPath(int id) => '/{{.LowerPluralStructName}}/edit/$id';
   static String showPath(int id) => '/{{.LowerPluralStructName}}/show/$id';

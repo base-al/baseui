@@ -10,8 +10,8 @@ import (
 )
 
 var guiCmd = &cobra.Command{
-	Use:     "generateui [name] [field:type...]",
-	Aliases: []string{"gui"},
+	Use:     "generate [name] [field:type...]",
+	Aliases: []string{"g"},
 	Short:   "Generate a new Flutter UI module",
 	Long: `Generate a new Flutter UI module with the specified name and fields.
 This command creates a complete module structure including:
