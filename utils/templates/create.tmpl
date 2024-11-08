@@ -1,19 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+{{- range .Fields}}
+{{- if eq .Type "DateTime"}}
+import 'package:intl/intl.dart';
+{{- end}}
+{{- end}}
+
 import '../controllers/{{.StructName | toLower}}_controller.dart';
 
 class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
   {{.StructName}}Create({super.key});
-  
-  final _formKey = GlobalKey<FormState>();  
-  {{- range .Fields}}
-  final _{{.Name | toCamelCase}}Controller = TextEditingController();
-  {{- end}}
 
-  // Use RxDart for reactive state management
+  final _formKey = GlobalKey<FormState>();
+
   {{- range .Fields}}
   {{- if eq .Type "DateTime"}}
-  final Rx<DateTime?> _selected{{.Name | toPascalCase}} = Rx<DateTime?>(null);
+  final DateFormat _dateFormat = DateFormat('yyyy-MM-dd HH:mm');
+  final Rx<DateTime?> selected{{.Name | toPascalCase}} = Rx<DateTime?>(null);
+  final TextEditingController {{.Name | toCamelCase}}Controller = TextEditingController();
+  {{- else if eq .Type "bool"}}
+  final Rx<bool> {{.Name | toCamelCase}}Checkbox = Rx<bool>(false);
+  {{- else}}
+  final TextEditingController {{.Name | toCamelCase}}Controller = TextEditingController();
   {{- end}}
   {{- end}}
 
@@ -32,39 +40,38 @@ class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
               {{- range .Fields}}
               {{- if eq .Type "DateTime"}}
               TextFormField(
-                controller: _{{.Name | toCamelCase}}Controller,
+                controller: {{.Name | toCamelCase}}Controller,
                 decoration: const InputDecoration(
                   labelText: '{{.Name | toTitleCase}}',
                   suffixIcon: Icon(Icons.calendar_today),
                 ),
                 readOnly: true,
                 onTap: () async {
-  
                   final DateTime? picked = await showDatePicker(
                     context: context,
-                    initialDate: _selected{{.Name | toPascalCase}}.value ?? DateTime.now(),
+                    initialDate: selected{{.Name | toPascalCase}}.value ?? DateTime.now(),
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
                   );
-                  
-                 if (!context.mounted) return;
+
+                  if (!context.mounted) return;
                   if (picked != null) {
                     final TimeOfDay? time = await showTimePicker(
                       context: context,
                       initialTime: TimeOfDay.fromDateTime(
-                        _selectedLastLogin.value ?? DateTime.now(),
+                        selected{{.Name | toPascalCase}}.value ?? DateTime.now(),
                       ),
                     );
-                    
+
                     if (context.mounted && time != null) {
-                      _selected{{.Name | toPascalCase}}.value = DateTime(
+                      selected{{.Name | toPascalCase}}.value = DateTime(
                         picked.year,
                         picked.month,
                         picked.day,
                         time.hour,
                         time.minute,
                       );
-                      _{{.Name | toCamelCase}}Controller.text = _dateFormat.format(_selected{{.Name | toPascalCase}}.value!);
+                      {{.Name | toCamelCase}}Controller.text = _dateFormat.format(selected{{.Name | toPascalCase}}.value!);
                     }
                   }
                 },
@@ -78,14 +85,14 @@ class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
               {{- else if eq .Type "bool"}}
               Obx(() => CheckboxListTile(
                 title: const Text('{{.Name | toTitleCase}}'),
-                value: _{{.Name | toCamelCase}}Controller.text.toLowerCase() == 'true',
-                onChanged: (bool? value) {
-                  _{{.Name | toCamelCase}}Controller.text = value.toString();
+                value: {{.Name | toCamelCase}}Checkbox.value,
+                onChanged: (value) {
+                    {{.Name | toCamelCase}}Checkbox.value = value ?? false;
                 },
               )),
               {{- else if eq .Type "int"}}
               TextFormField(
-                controller: _{{.Name | toCamelCase}}Controller,
+                controller: {{.Name | toCamelCase}}Controller,
                 decoration: const InputDecoration(labelText: '{{.Name | toTitleCase}}'),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -100,7 +107,7 @@ class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
               ),
               {{- else if eq .Type "double" "float"}}
               TextFormField(
-                controller: _{{.Name | toCamelCase}}Controller,
+                controller: {{.Name | toCamelCase}}Controller,
                 decoration: const InputDecoration(labelText: '{{.Name | toTitleCase}}'),
                 keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: (value) {
@@ -113,42 +120,14 @@ class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
                   return null;
                 },
               ),
-              {{- else if eq .Type "password"}}
-              TextFormField(
-                controller: _{{.Name | toCamelCase}}Controller,
-                decoration: const InputDecoration(
-                  labelText: '{{.Name | toTitleCase}}',
-                  suffixIcon: Icon(Icons.lock),
-                ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter {{.Name | toLower}}';
-                  }
-                  if (value.length < 6) {
-                    return '{{.Name | toTitleCase}} must be at least 6 characters';
-                  }
-                  return null;
-                },
-              ),
               {{- else}}
               TextFormField(
-                controller: _{{.Name | toCamelCase}}Controller,
+                controller: {{.Name | toCamelCase}}Controller,
                 decoration: const InputDecoration(labelText: '{{.Name | toTitleCase}}'),
-                {{- if eq .Name "email"}}
-                keyboardType: TextInputType.emailAddress,
-                {{- end}}
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter {{.Name | toLower}}';
                   }
-                  {{- if eq .Type "String"}}
-                  {{- if eq .Name "email"}}
-                  if (!GetUtils.isEmail(value)) {
-                    return 'Please enter a valid email';
-                  }
-                  {{- end}}
-                  {{- end}}
                   return null;
                 },
               ),
@@ -160,7 +139,7 @@ class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
                   if (_formKey.currentState!.validate()) {
                     controller.create{{.StructName}}({
                       {{- range .Fields}}
-                      '{{.Name}}': {{- if eq .Type "DateTime"}}_selected{{.Name | toPascalCase}}.value{{- else if eq .Type "int"}}int.tryParse(_{{.Name | toCamelCase}}Controller.text){{- else if eq .Type "double" "float"}}double.tryParse(_{{.Name | toCamelCase}}Controller.text){{- else if eq .Type "bool"}}_{{.Name | toCamelCase}}Controller.text.toLowerCase() == 'true'{{- else}}_{{.Name | toCamelCase}}Controller.text{{- end}},
+                      '{{.Name | toSnakeCase}}': {{- if eq .Type "DateTime"}}selected{{.Name | toPascalCase}}.value{{- else if eq .Type "int"}}int.tryParse({{.Name | toCamelCase}}Controller.text){{- else if eq .Type "double" "float"}}double.tryParse({{.Name | toCamelCase}}Controller.text){{- else if eq .Type "bool"}}{{.Name | toCamelCase}}Checkbox.value{{- else}}{{.Name | toCamelCase}}Controller.text{{- end}},
                       {{- end}}
                     });
                   }

@@ -14,13 +14,13 @@ var guiCmd = &cobra.Command{
 	Aliases: []string{"g"},
 	Short:   "Generate a new Flutter UI module",
 	Long: `Generate a new Flutter UI module with the specified name and fields.
-This command creates a complete module structure including:
-- Models for data representation
-- Controllers for business logic
-- Services for API communication
-- Views for user interface
-- Bindings for dependency injection
-- Routes for navigation`,
+			This command creates a complete module structure including:
+			- Models for data representation
+			- Controllers for business logic
+			- Services for API communication
+			- Views for user interface
+			- Bindings for dependency injection
+			- Routes for navigation`,
 	Args: cobra.MinimumNArgs(1),
 	Run:  generateUIModule,
 }

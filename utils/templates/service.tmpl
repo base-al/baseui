@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:core/core.dart';
 import 'package:get/get_connect/http/src/request/request.dart';
 import 'package:get/get_connect/http/src/response/response.dart';
-import '../models/{{.StructName | toLower}}.dart';
 
 class {{.StructName}}Service extends BaseConnect {
   @override
@@ -49,18 +48,18 @@ class {{.StructName}}Service extends BaseConnect {
     }
   }
 
-  Future<Response> create{{.StructName}}({{.StructName}} {{.StructName | toLower}}Data) async {
+  Future<Response> create{{.StructName}}(data) async {
     try {
-      final response = await post('/{{.LowerPluralStructName}}', {{.StructName | toLower}}Data.toJson());
+      final response = await post('/{{.LowerPluralStructName}}', data);
       return _handleResponse(response, 'creating {{.StructName | toLower}}');
     } catch (e) {
       return _handleError(e, 'creating {{.StructName | toLower}}');
     }
   }
 
-  Future<Response> update{{.StructName}}(int id, {{.StructName}} {{.StructName | toLower}}) async {
+  Future<Response> update{{.StructName}}(int id,  {{.StructName | toLower}}) async {
     try {
-      final response = await put('/{{.LowerPluralStructName}}/$id', {{.StructName | toLower}}.toJson());
+      final response = await put('/{{.LowerPluralStructName}}/$id', {{.StructName | toLower}});
       return _handleResponse(response, 'updating {{.StructName | toLower}}');
     } catch (e) {
       return _handleError(e, 'updating {{.StructName | toLower}}');

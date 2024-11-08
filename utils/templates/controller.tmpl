@@ -5,7 +5,7 @@ import '../services/{{.StructName | toLower}}_service.dart';
 
 class {{.PluralName}}Controller extends GetxController {
   final {{.StructName}}Service {{.StructName | toLower}}Service;
-  
+
   final isLoading = false.obs;
   final items = <{{.StructName}}>[].obs;
   final totalItems = 0.obs;
@@ -30,14 +30,14 @@ class {{.PluralName}}Controller extends GetxController {
 
   Future<void> loadData() async {
     isLoading.value = true;
-    
+
     try {
       final response = await {{.StructName | toLower}}Service.get{{.PluralName}}(
         page: currentPage.value,
         limit: itemsPerPage.value,
         search: searchQuery.value,
       );
-      
+
       if (response.body == null) throw 'No response data';
 
       final data = response.body!['data'] as List;
@@ -46,7 +46,7 @@ class {{.PluralName}}Controller extends GetxController {
       items.value = data.map((json) => {{.StructName}}.fromJson(json as Map<String, dynamic>)).toList();
       totalItems.value = pagination['total'] as int;
       totalPages.value = pagination['total_pages'] as int;
-      
+
     } catch (e) {
       _showError('Failed to load {{.LowerPluralStructName}}', e);
     } finally {
@@ -57,9 +57,8 @@ class {{.PluralName}}Controller extends GetxController {
   Future<void> create{{.StructName}}(Map<String, dynamic> data) async {
     try {
       isLoading.value = true;
-      final item = {{.StructName}}.fromJson(data);
-      final response = await {{.StructName | toLower}}Service.create{{.StructName}}(item);
-      
+      final response = await {{.StructName | toLower}}Service.create{{.StructName}}(data);
+
       if (response.isOk) {
         await refreshData();
         Get.back();
@@ -77,9 +76,8 @@ class {{.PluralName}}Controller extends GetxController {
   Future<void> update{{.StructName}}(int id, Map<String, dynamic> data) async {
     try {
       isLoading.value = true;
-      final item = {{.StructName}}.fromJson(data);
-      final response = await {{.StructName | toLower}}Service.update{{.StructName}}(id, item);
-      
+      final response = await {{.StructName | toLower}}Service.update{{.StructName}}(id, data);
+
       if (response.isOk) {
         await refreshData();
         Get.back();
@@ -98,7 +96,7 @@ class {{.PluralName}}Controller extends GetxController {
     try {
       isLoading.value = true;
       final response = await {{.StructName | toLower}}Service.delete{{.StructName}}(id);
-      
+
       if (response.isOk) {
         await refreshData();
         _showSuccess('{{.StructName}} deleted successfully');
@@ -116,7 +114,7 @@ class {{.PluralName}}Controller extends GetxController {
     try {
       isLoading.value = true;
       final response = await {{.StructName | toLower}}Service.get{{.StructName}}(id);
-      
+
       if (response.isOk && response.body != null) {
         return {{.StructName}}.fromJson(response.body as Map<String, dynamic>);
       }
@@ -133,7 +131,7 @@ class {{.PluralName}}Controller extends GetxController {
     try {
       isLoading.value = true;
       final response = await {{.StructName | toLower}}Service.getSorted();
-      
+
       if (response.isOk && response.body != null) {
         final data = response.body as List;
         items.value = data.map((json) => {{.StructName}}.fromJson(json as Map<String, dynamic>)).toList();
@@ -172,13 +170,13 @@ class {{.PluralName}}Controller extends GetxController {
     try {
       isLoading.value = true;
       final response = await {{.StructName | toLower}}Service.updateSort(sortedIds);
-      
+
       if (!response.isOk) {
         // Revert to original order on error
         await loadSortedData();
         throw Exception(response.statusText ?? 'Failed to update sort order');
       }
-      
+
       _showSuccess('Sort order updated successfully');
     } catch (e) {
       _showError('Failed to update sort order', e);
