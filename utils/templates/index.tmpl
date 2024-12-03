@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:core/core.dart';
-import '../controllers/{{.StructName | toLower}}_controller.dart';
+import '../controllers/{{.StructName | toSnakeCase}}_controller.dart';
 import 'mode/grid.dart';
 import 'mode/list.dart';
 {{if .HasSort}}import 'mode/sort.dart';{{end}}

@@ -6,8 +6,8 @@ import 'package:intl/intl.dart';
 {{- end}}
 {{- end}}
 
-import '../controllers/{{.StructName | toLower}}_controller.dart';
-import '../models/{{.StructName | toLower}}.dart';
+import '../controllers/{{.StructName | toSnakeCase}}_controller.dart';
+import '../models/{{.StructName | toSnakeCase}}.dart';
 
 class {{.StructName}}Edit extends GetView<{{.PluralName}}Controller> {
   {{.StructName}}Edit({super.key});

@@ -1,6 +1,6 @@
 import 'package:core/core.dart';
 
-import 'bindings/{{.StructName | toLower}}_binding.dart';
+import 'bindings/{{.StructName | toSnakeCase}}_binding.dart';
 import 'views/create.dart';
 import 'views/edit.dart';
 import 'views/index.dart';
@@ -41,14 +41,14 @@ class {{.PluralName}}Routes {
 abstract class {{.PluralName}}Route {
   {{.PluralName}}Route._();
 
-  static const list = '/{{.LowerPluralStructName}}';
-  static const create = '/{{.LowerPluralStructName}}/create';
-  static const edit = '/{{.LowerPluralStructName}}/edit/:id';
-  static const show = '/{{.LowerPluralStructName}}/show/:id';
+  static const list = '/{{.PluralName | toSlug }}';
+  static const create = '/{{.PluralName | toSlug }}/create';
+  static const edit = '/{{.PluralName | toSlug }}/edit/:id';
+  static const show = '/{{.PluralName | toSlug }}/show/:id';
   {{if .HasSort}}
-  static const sort = '/{{.LowerPluralStructName}}/sort';
+  static const sort = '/{{.PluralName | toSlug }}/sort';
   {{end}}
   // Helper methods for dynamic routes
-  static String editPath(int id) => '/{{.LowerPluralStructName}}/edit/$id';
-  static String showPath(int id) => '/{{.LowerPluralStructName}}/show/$id';
+  static String editPath(int id) => '/{{.PluralName | toSlug }}/edit/$id';
+  static String showPath(int id) => '/{{.PluralName | toSlug }}/show/$id';
 }

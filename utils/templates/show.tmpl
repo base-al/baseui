@@ -2,8 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../controllers/{{.StructName | toLower}}_controller.dart';
-import '../models/{{.StructName | toLower}}.dart';
+import '../controllers/{{.StructName | toSnakeCase}}_controller.dart';
+import '../models/{{.StructName | toSnakeCase}}.dart';
 
 class {{.StructName}}Show extends GetView<{{.PluralName}}Controller> {
   const {{.StructName}}Show({super.key});

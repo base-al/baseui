@@ -89,7 +89,7 @@ func GenerateFileFromTemplate(dir, filename, templateFile string, data map[strin
 	funcMap := template.FuncMap{
 		"toLower":      ToLower,
 		"toUpper":      ToUpper,
-		"toTitle":      ToTitle,
+		"toSlug":       ToSlug,
 		"toCamelCase":  ToCamelCase,
 		"toTitleCase":  ToTitle,
 		"toPascalCase": ToPascalCase,

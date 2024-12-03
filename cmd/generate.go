@@ -80,7 +80,7 @@ func generateUIModule(cmd *cobra.Command, args []string) {
 		"StructName":            structName,
 		"PluralName":            pluralName,
 		"LowerStructName":       utils.ToCamelCase(singularName),
-		"LowerPluralStructName": utils.ToSnakeCase(pluralName),
+		"LowerPluralStructName": utils.ToSlug(pluralName),
 		"TableName":             utils.ToSnakeCase(pluralName),
 		"RouteName":             utils.ToSnakeCase(pluralName),
 		"PackageName":           dirName,

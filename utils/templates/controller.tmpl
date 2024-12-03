@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../models/{{.StructName | toLower}}.dart';
-import '../services/{{.StructName | toLower}}_service.dart';
+import '../models/{{.StructName | toSnakeCase}}.dart';
+import '../services/{{.StructName | toSnakeCase}}_service.dart';
 
 class {{.PluralName}}Controller extends GetxController {
   final {{.StructName}}Service {{.StructName | toLower}}Service;

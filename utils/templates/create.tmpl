@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 {{- end}}
 {{- end}}
 
-import '../controllers/{{.StructName | toLower}}_controller.dart';
+import '../controllers/{{.StructName | toSnakeCase}}_controller.dart';
 
 class {{.StructName}}Create extends GetView<{{.PluralName}}Controller> {
   {{.StructName}}Create({super.key});

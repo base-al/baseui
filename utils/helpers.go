@@ -68,6 +68,17 @@ func ToUpper(s string) string {
 	return strings.ToUpper(s)
 }
 
+func ToSlug(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if i > 0 && unicode.IsUpper(r) {
+			result.WriteRune('-')
+		}
+		result.WriteRune(unicode.ToLower(r))
+	}
+	return result.String()
+}
+
 func ToTitle(s string) string {
 	return cases.Title(language.Und).String(s)
 }

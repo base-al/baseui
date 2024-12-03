@@ -1,6 +1,6 @@
 import 'package:admin/core/widgets/base/table.dart';
 import 'package:flutter/material.dart';
-import '../models/{{.StructName | toLower}}.dart';
+import '../models/{{.StructName | toSnakeCase}}.dart';
 
 class {{.StructName}}DataSource extends BaseDataSource<{{.StructName}}> {
   {{.StructName}}DataSource(
@@ -41,7 +41,7 @@ class {{.StructName}}DataSource extends BaseDataSource<{{.StructName}}> {
   int getColumnsCount() {
     // Count visible columns (excluding password field)
     int baseColumns = 2; // ID and Actions
-    int visibleFields = {{len .Fields}}; 
+    int visibleFields = {{len .Fields}};
     {{- range .Fields}}
     {{- if eq .Type "password"}}
     visibleFields--;

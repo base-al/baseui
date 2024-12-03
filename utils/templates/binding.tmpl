@@ -1,6 +1,6 @@
 import 'package:get/get.dart';
-import '../controllers/{{.StructName | toLower}}_controller.dart';
-import '../services/{{.StructName | toLower}}_service.dart';
+import '../controllers/{{.StructName | toSnakeCase}}_controller.dart';
+import '../services/{{.StructName | toSnakeCase}}_service.dart';
 
 class {{.PluralName}}Binding extends Bindings {
   @override
